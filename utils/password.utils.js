@@ -1,22 +1,24 @@
-import { compare, genSalt, hash } from "bcrypt"
-import dotenv from "dotenv"
+import { compare, genSalt, hash } from "bcrypt";
+import dotenv from "dotenv";
 
-dotenv.config()
+dotenv.config();
 
-const salt_round = process.env.SALT_ROUND
+const salt_round = process.env.SALT_ROUND;
 
 export const hashPassword = async (password) => {
-    try {
-        const salt = genSalt(salt_round)
-        const hashPassword = hash(password,salt)
-        return hashPassword
-        
-    } catch (error) {
-        console.log("error from utils hashpassword", error)
+  try {
+    if (!password) {
+      throw new Error("password is required");
     }
-}
+    const salt = await genSalt(salt_round);
+    const hashPassword = await hash(password, salt);
+    return hashPassword;
+  } catch (error) {
+    console.log("error from utils hashpassword", error);
+  }
+};
 
 export const verifyPassword = async (password, hashPassword) => {
-    const isValid = compare(password,salt)
-    return isValid
-}
+  const isValid = await compare(password, hashPassword);
+  return isValid;
+};
