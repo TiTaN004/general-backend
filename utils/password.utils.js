@@ -14,7 +14,7 @@ export const hashPassword = async (password) => {
     const hashPassword = await hash(password, salt);
     return hashPassword;
   } catch (error) {
-    console.log("error from utils hashpassword", error);
+    console.error("error from utils hashpassword", error);
   }
 };
 

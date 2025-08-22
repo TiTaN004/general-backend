@@ -54,7 +54,7 @@ export const signin = async (req, res, next) => {
       message: "login successful",
     });
   } catch (error) {
-    console.log("error from controller signin ", error);
+    console.error("error from controller signin ", error);
     next(error);
   }
 };
@@ -62,8 +62,6 @@ export const signin = async (req, res, next) => {
 export const signup = async (req, res, next) => {
   try {
     const { userName, password } = req.body;
-
-    console.log(userName, password);
 
     if (!userName || !password) {
       return res.status(400).json({
@@ -86,8 +84,6 @@ export const signup = async (req, res, next) => {
     const [rows] = await pool.execute(
       "select count(id) as count from admin"
     );
-
-    console.log(rows)
 
     if (rows[0].count > 0) {
       return res.status(403).json({
@@ -131,7 +127,7 @@ export const signout = (req, res, next) => {
       message: "Logged out successfully"
     });
   } catch (error) {
-    console.log("error from controller signout ", error);
+    console.error("error from controller signout ", error);
     next(error);
   }
 };
