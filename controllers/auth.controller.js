@@ -38,9 +38,15 @@ export const signin = async (req, res, next) => {
       userName: rows[0].user_name
     })
 
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000  // 15 hours
+    });
+
     return res.status(200).json({
       success: true,
-      token: token,
       user: {
         id: rows[0].id,
         userName: rows[0].user_name
@@ -112,7 +118,22 @@ export const signup = async (req, res, next) => {
 };
 
 export const signout = (req, res, next) => {
-  res.send("signout route");
+  try {
+    // Clear the HTTP-only cookie
+    res.clearCookie('authToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully"
+    });
+  } catch (error) {
+    console.log("error from controller signout ", error);
+    next(error);
+  }
 };
 
 export const getCurrentUser = (req, res) => {
@@ -158,7 +179,8 @@ try {
     
     res.status(200).json({
       success: true,
-      message: "authenticated"
+      message: "authenticated",
+      user: {id: row[0].id,userName: row[0].user_name}
     })
   } catch (error) {
     if (error.name === "TokenExpiredError") {

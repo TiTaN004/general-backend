@@ -13,13 +13,16 @@ export const saveResponses = async (req, res, next) => {
       });
     }
 
+    const createdAt = new Date().toISOString().slice(0, 19).replace("T", " ");
+
     const [rows] = await pool.execute(
-      "insert into form (name,email,mobile,message) values(?,?,?,?)",
+      "insert into form (name,email,mobile,message,created_at) values(?,?,?,?,?)",
       [
         parsed.data.name,
         parsed.data.email,
         parsed.data.mobile,
         parsed.data.message,
+        createdAt
       ]
     );
 
@@ -38,12 +41,12 @@ export const saveResponses = async (req, res, next) => {
 
 export const getResponses = async (req, res, next) => {
   try {
-    const { limit, page } = req.body;
+    const { limit, page } = req.query;
 
     const offset = (page - 1) * limit;
 
     const [rows] = await pool.execute(
-      "select * from form LIMIT ? OFFSET ?",
+      "SELECT * FROM form ORDER BY id DESC LIMIT ? OFFSET ?",
       [limit, offset]
     );
 
