@@ -1,12 +1,14 @@
 import { pool } from "../db.js";
+import { generateToken } from "../utils/token.utils.js";
 import { hashPassword, verifyPassword } from "../utils/password.utils.js";
+import { verifyToken } from "../utils/token.utils.js";
 
 export const signin = async (req, res, next) => {
   try {
     const { userName, password } = req.body;
 
     const [rows] = await pool.execute(
-      "select user_name, password from admin where user_name = ?",
+      "select id, user_name, password from admin where user_name = ?",
       [userName]
     );
 
@@ -30,9 +32,19 @@ export const signin = async (req, res, next) => {
         message: "invalid credentials",
       });
     }
+    
+    const token = await generateToken({
+      id: rows[0].id,
+      userName: rows[0].user_name
+    })
 
     return res.status(200).json({
       success: true,
+      token: token,
+      user: {
+        id: rows[0].id,
+        userName: rows[0].user_name
+      },
       message: "login successful",
     });
   } catch (error) {
@@ -66,14 +78,15 @@ export const signup = async (req, res, next) => {
     }
 
     const [rows] = await pool.execute(
-      "select * from admin where user_name = ?",
-      [userName]
+      "select count(id) as count from admin"
     );
 
-    if (rows.length > 0) {
-      return res.status(400).json({
+    console.log(rows)
+
+    if (rows[0].count > 0) {
+      return res.status(403).json({
         success: false,
-        message: "UserName already exist",
+        message: "signup disabled. Admin already exist",
       });
     } else {
       const hashedPassword = await hashPassword(password);
@@ -101,3 +114,64 @@ export const signup = async (req, res, next) => {
 export const signout = (req, res, next) => {
   res.send("signout route");
 };
+
+export const getCurrentUser = (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+  return res.status(200).json({
+    success: true,
+    user: {
+      id: req.user.id,
+      userName: req.user.userName,
+      role: req.user.role
+    }
+  });
+};
+
+export const validateToken = async (req, res) => {
+try {
+    // Get token either from cookies or from Authorization header
+    const token =
+      req.cookies?.authToken || req.headers["authorization"]?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Access token required",
+      });
+    }
+
+    // Verify token
+    const decoded = verifyToken(token);
+
+    // check in db
+
+    const [row] = await pool.execute("select id, user_name from admin where id = ? and user_name = ? ", [decoded.id, decoded.userName])
+
+    if(row.length == 0){
+      res.status(401).json({
+        success: false,
+        message: "user not found"
+      })
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: "authenticated"
+    })
+  } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ success: false, message: "Token expired" });
+    }
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ success: false, message: "Invalid token" });
+    }
+
+    // Unhandled error
+    return res.status(500).json({
+      success: false,
+      message: "Something went wrong while authenticating",
+    });
+  }
+}
